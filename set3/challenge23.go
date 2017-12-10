@@ -41,12 +41,6 @@ func main() {
 
 	cloned := util.NewMT19337State(state)
 
-	for i := range cloned.State {
-		if cloned.State[i] != m.State[i] {
-			fmt.Println("Failed at", i)
-		}
-	}
-
 	z := m.NextInt()
 	for cloned.NextInt() != z {
 	}
