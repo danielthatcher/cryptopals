@@ -21,3 +21,12 @@ func RandomBytes(l int) []byte {
 
 	return r
 }
+
+func Pad(text []byte, blocksize int) []byte {
+	padAmount := blocksize - (len(text) % blocksize)
+	ret := text
+	for i := 0; i < padAmount; i++ {
+		ret = append(ret, byte(padAmount))
+	}
+	return ret
+}
