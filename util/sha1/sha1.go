@@ -9,6 +9,7 @@
 package sha1
 
 import (
+	"encoding/binary"
 	"errors"
 	"hash"
 )
@@ -43,6 +44,19 @@ const (
 	magic         = "sha\x01"
 	marshaledSize = len(magic) + 5*4 + chunk + 8
 )
+
+// Extra functions for cryptopals
+// Lots of help from https://github.com/ysmolsky/cryptopals-matasano-solutions/blob/master/29/sha1f/sha1.go
+func NewForged(h []byte, len uint64) hash.Hash {
+	d := new(digest)
+	d.Reset()
+	for i := 0; i < 5; i++ {
+		d.h[i] = binary.BigEndian.Uint32(h[4*i : 4*(i+1)])
+	}
+	d.len = len
+
+	return d
+}
 
 func (d *digest) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 0, marshaledSize)
