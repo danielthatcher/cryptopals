@@ -1,6 +1,9 @@
 package util
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
 	"math/big"
 )
 
@@ -22,4 +25,34 @@ func (d *DiffieHellman) PublicKey(a int) big.Int {
 	A := big.NewInt(int64(a))
 	r.Exp(&d.G, A, &d.P)
 	return r
+}
+
+func (d *DiffieHellman) SharedKey(A big.Int, b int) ([]byte, []byte) {
+	var B big.Int
+	var S big.Int
+	B.SetInt64(int64(b))
+	S.Exp(&A, &B, &d.P)
+	data, _ := S.GobEncode()
+	x := sha256.Sum256(data)
+	return x[:16], x[16:]
+}
+
+func DHEncrypt(msg []byte, S []byte) ([]byte, []byte) {
+	msg = Pad(msg, len(S))
+	block, _ := aes.NewCipher(S)
+	iv := RandomBytes(len(S))
+	mode := cipher.NewCBCEncrypter(block, iv)
+	ciphertext := make([]byte, len(msg))
+	mode.CryptBlocks(ciphertext, msg)
+
+	return ciphertext, iv
+}
+
+func DHDecrypt(msg []byte, S []byte, iv []byte) []byte {
+	block, _ := aes.NewCipher(S)
+	mode := cipher.NewCBCDecrypter(block, iv)
+	plaintext := make([]byte, len(msg))
+	mode.CryptBlocks(plaintext, msg)
+
+	return plaintext
 }
