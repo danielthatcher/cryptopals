@@ -76,6 +76,26 @@ func Crypt(msg []byte, key [2]big.Int) []byte {
 	return msgi.Bytes()
 }
 
+func CryptFixed(msg []byte, key [2]big.Int, length int) []byte {
+	var msgi big.Int
+	msgi.SetBytes(msg)
+	msgi.Exp(&msgi, &key[0], &key[1])
+	b := msgi.Bytes()
+	if length < len(b) {
+		panic("Length too short")
+	}
+
+	for len(b) < length {
+		b = append([]byte{0}, b...)
+	}
+
+	return b
+}
+
+func CryptInt(msg big.Int, key [2]big.Int) big.Int {
+	return *msg.Exp(&msg, &key[0], &key[1])
+}
+
 // https://rosettacode.org/wiki/Chinese_remainder_theorem#Go
 func CRT(a []*big.Int, n []*big.Int) (*big.Int, error) {
 	p := new(big.Int).Set(n[0])
