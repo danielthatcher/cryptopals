@@ -45,8 +45,9 @@ func (d *DSA) SignMessage(msg []byte, keypair [2]big.Int) [2]big.Int {
 		r.Mod(&r, &d.Q)
 
 		var h big.Int
-
-		h.SetBytes(d.Hash().Sum(msg))
+		hashFunc := d.Hash()
+		hashFunc.Write(msg)
+		h.SetString(fmt.Sprintf("%x", hashFunc.Sum(nil)), 16)
 
 		s.Mul(&keypair[1], &r)
 		s.Mod(&s, &d.Q)
@@ -55,6 +56,35 @@ func (d *DSA) SignMessage(msg []byte, keypair [2]big.Int) [2]big.Int {
 		s.Mul(&s, &kinv)
 		s.Mod(&s, &d.Q)
 	}
+
+	return [2]big.Int{r, s}
+}
+
+func (d *DSA) SignMessageWithK(msg []byte, keypair [2]big.Int, k big.Int) [2]big.Int {
+	var r, s big.Int
+	s.SetInt64(0)
+	r.SetInt64(0)
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in signing")
+		}
+	}()
+	kinv := rsa.InvMod(k, d.Q)
+	r.Exp(&d.G, &k, &d.P)
+	r.Mod(&r, &d.Q)
+
+	var h big.Int
+	hashFunc := d.Hash()
+	hashFunc.Write(msg)
+	h.SetString(fmt.Sprintf("%x", hashFunc.Sum(nil)), 16)
+
+	s.Mul(&keypair[1], &r)
+	s.Mod(&s, &d.Q)
+	s.Add(&s, &h)
+	s.Mod(&s, &d.Q)
+	s.Mul(&s, &kinv)
+	s.Mod(&s, &d.Q)
 
 	return [2]big.Int{r, s}
 }
@@ -71,7 +101,9 @@ func (d *DSA) VerifySignature(msg []byte, signature [2]big.Int, pubkey big.Int) 
 	var w, u1, u2, v1, v2, v big.Int
 	w = rsa.InvMod(signature[1], d.Q)
 
-	u1.SetBytes(d.Hash().Sum(msg))
+	h := d.Hash()
+	h.Write(msg)
+	u1.SetString(fmt.Sprintf("%x", h.Sum(nil)), 16)
 	u1.Mul(&u1, &w)
 	u1.Mod(&u1, &d.Q)
 
@@ -83,9 +115,6 @@ func (d *DSA) VerifySignature(msg []byte, signature [2]big.Int, pubkey big.Int) 
 	v.Mul(&v1, &v2)
 	v.Mod(&v, &d.P)
 	v.Mod(&v, &d.Q)
-
-	fmt.Println(v)
-	fmt.Println(signature)
 
 	// v == r implies a valid signature
 	return v.Cmp(&signature[0]) == 0
